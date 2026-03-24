@@ -18,7 +18,12 @@ def load_and_chunk_pdf(file_path: str, chunk_size: int = 300, overlap: int = 50)
     full_text = ""
 
     for page in doc:
-        full_text += page.get_text()
+        # Request plain text explicitly; guard for non-string stub unions.
+        page_text = page.get_text("text")
+        if isinstance(page_text, str):
+            full_text += page_text
+        elif page_text is not None:
+            full_text += str(page_text)
 
     doc.close()
 
