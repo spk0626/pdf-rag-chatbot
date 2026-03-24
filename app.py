@@ -37,16 +37,25 @@ def upload_pdf(file):
         return f"❌  Error loading PDF: {e}", []
 
 
-def respond(message: str, history: list):
+def respond(message: str, history: list[dict] | None):
     """Handle a chat message: retrieve relevant chunks and generate a response."""
     global collection, chat_history
+
+    if history is None:
+        history = []
 
     message = message.strip()
     if not message:
         return history, ""
 
     if collection is None:
-        history.append((message, "⚠️  Please upload a PDF first using the panel on the left."))
+        history.append({"role": "user", "content": message})
+        history.append(
+            {
+                "role": "assistant",
+                "content": "⚠️  Please upload a PDF first using the panel on the left.",
+            }
+        )
         return history, ""
 
     try:
@@ -56,7 +65,8 @@ def respond(message: str, history: list):
         answer = f"❌  Error generating response: {e}"
 
     chat_history.append((message, answer))
-    history.append((message, answer))
+    history.append({"role": "user", "content": message})
+    history.append({"role": "assistant", "content": answer})
 
     return history, ""
 
@@ -76,7 +86,7 @@ CHAT_CSS = """
 """
 
 
-with gr.Blocks(title="PDF Q&A Chatbot", theme=Soft(), css=CHAT_CSS) as demo:
+with gr.Blocks(title="PDF Q&A Chatbot") as demo:
 
     gr.Markdown(
         """
@@ -143,4 +153,4 @@ with gr.Blocks(title="PDF Q&A Chatbot", theme=Soft(), css=CHAT_CSS) as demo:
 
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(theme=Soft(), css=CHAT_CSS)

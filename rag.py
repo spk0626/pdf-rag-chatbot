@@ -12,7 +12,12 @@ chroma_client = chromadb.Client()          # chroma is used because its in-memor
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 COLLECTION_NAME = "pdf_chunks"
-LLM_MODEL = "llama3-8b-8192"
+LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.1-8b-instant")
+FALLBACK_MODELS = [
+    LLM_MODEL,
+    "llama-3.1-8b-instant",
+    "llama3-70b-8192",
+]
 
 
 # ── Indexing ────────────────────────────────────────────────────────────────────
@@ -84,15 +89,28 @@ def generate_response(
         "Answer based only on the context above:"
     )
 
-    response = groq_client.chat.completions.create(
-        model=LLM_MODEL,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=0.3,
-        max_tokens=1024,
-    )
+    # Try preferred model first, then fall back to known alternatives.
+    response = None
+    last_error: Exception | None = None
+    for model_name in dict.fromkeys(FALLBACK_MODELS):
+        try:
+            response = groq_client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.3,
+                max_tokens=1024,
+            )
+            break
+        except Exception as exc:
+            last_error = exc
+
+    if response is None:
+        raise RuntimeError(
+            f"All configured Groq models failed: {FALLBACK_MODELS}. Last error: {last_error}"
+        )
 
     content = response.choices[0].message.content
     if content is None:
