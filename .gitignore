@@ -19,6 +19,7 @@ env/
 
 # ChromaDB persistent storage (if ever used)
 chroma_db/
+.chroma/
 
 # OS
 .DS_Store
@@ -27,3 +28,9 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Node / frontend
+node_modules/
+dist/
+.vite/
+npm-debug.log*
